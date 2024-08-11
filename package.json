@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "prettier": "prettier --check \"**/*.{js,ts,jsx,tsx,json,css,scss,md}\"",
     "format": "prettier --write \"**/*.{js,ts,jsx,tsx,json,css,scss,md}\"",
-    "postinstall": "prisma generate --no-engine"
+    "postinstall": "prisma generate"
   },
   "keywords": [],
   "author": "",
