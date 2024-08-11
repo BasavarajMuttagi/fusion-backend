@@ -5,6 +5,8 @@ import {
   CLOUDINARY_API_SECRET,
   CLOUDINARY_NAME,
 } from "../..";
+import prisma from "../../prisma/db";
+import { DeleteNotification, UploadNotification } from "../types";
 
 const GetSignature = async (req: Request, res: Response) => {
   try {
@@ -50,4 +52,67 @@ const GetAllObjects = async (req: Request, res: Response) => {
   }
 };
 
-export { GetSignature, GetAllObjects };
+const HandleNotifications = async (req: Request, res: Response) => {
+  const payload = req.body;
+  try {
+    switch (payload.notification_type) {
+      case "upload":
+        await handleNewUpload(payload);
+        break;
+      case "delete":
+        console.log(payload);
+        await handleDelete(payload);
+        break;
+      default:
+        console.log("Unhandled notification type:", payload.notification_type);
+    }
+
+    return res.sendStatus(200);
+  } catch (error) {
+    console.log(error);
+    return res.sendStatus(500);
+  }
+};
+export { GetSignature, GetAllObjects, HandleNotifications };
+
+const handleDelete = async (payload: DeleteNotification) => {
+  const assetIdsToDelete = payload.resources.map(
+    (resource) => resource.asset_id,
+  );
+  console.log("assetIdsToDelete", assetIdsToDelete);
+  try {
+    await prisma.cloudinaryAsset.deleteMany({
+      where: {
+        assetId: {
+          in: assetIdsToDelete,
+        },
+      },
+    });
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const handleNewUpload = async (payload: UploadNotification) => {
+  await prisma.cloudinaryAsset.create({
+    data: {
+      assetId: payload.asset_id,
+      publicId: payload.public_id,
+      resourceType: payload.resource_type,
+      format: payload.format,
+      width: payload.width,
+      height: payload.height,
+      bytes: payload.bytes,
+      url: payload.url,
+      secureUrl: payload.secure_url,
+      createdAt: payload.created_at,
+      updatedAt: payload.created_at,
+      tags: payload.tags,
+      duration: payload.duration,
+      frameRate: payload.frame_rate,
+      bitRate: payload.bit_rate,
+      playbackUrl: payload.playback_url,
+    },
+  });
+};

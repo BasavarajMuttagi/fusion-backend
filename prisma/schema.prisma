@@ -25,6 +25,37 @@ model User {
   updatedAt    DateTime     @updatedAt
 }
 
+model CloudinaryAsset {
+  id           String       @id @default(cuid())
+  assetId      String       @unique // Cloudinary's asset_id
+  publicId     String       @unique // Cloudinary's public_id
+  resourceType resourceType
+  format       String
+  width        Int
+  height       Int
+  bytes        Int
+  url          String
+  secureUrl    String
+  createdAt    DateTime
+  updatedAt    DateTime     @updatedAt
+
+  // Fields specific to video
+  duration    Float?
+  frameRate   Float?
+  bitRate     Int?
+  playbackUrl String?
+
+  // Common metadata
+  tags String[]
+
+  // You can add more fields here as needed
+}
+
+enum resourceType {
+  video
+  image
+}
+
 enum AuthProvider {
   local
   google
