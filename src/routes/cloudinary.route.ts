@@ -14,10 +14,10 @@ CloudinaryRouter.post("/signature", validateToken, GetSignature);
 CloudinaryRouter.get(
   "/getassets/:resource_type",
   validateToken,
-  GetAssetsByResourceType,
+  GetAssetsByResourceType
 );
 CloudinaryRouter.post("/webhook", HandleNotifications);
-CloudinaryRouter.get("/delete/:id", validateToken, DeleteAssetById);
+CloudinaryRouter.delete("/delete/:id", validateToken, DeleteAssetById);
 CloudinaryRouter.get("/star/:id", validateToken, StarAssetById);
 
 export default CloudinaryRouter;
