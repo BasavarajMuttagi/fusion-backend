@@ -14,7 +14,7 @@ CloudinaryRouter.post("/signature", validateToken, GetSignature);
 CloudinaryRouter.get(
   "/getassets/:resource_type",
   validateToken,
-  GetAssetsByResourceType
+  GetAssetsByResourceType,
 );
 CloudinaryRouter.post("/webhook", HandleNotifications);
 CloudinaryRouter.delete("/delete/:id", validateToken, DeleteAssetById);
