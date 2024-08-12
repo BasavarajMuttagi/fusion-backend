@@ -14,15 +14,16 @@ datasource db {
 }
 
 model User {
-  id           String       @id @default(uuid())
+  id           String            @id @default(uuid())
   firstname    String
   lastname     String
-  email        String       @unique
+  email        String            @unique
   password     String?
-  googleId     String?      @unique
-  authProvider AuthProvider @default(local)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  googleId     String?           @unique
+  authProvider AuthProvider      @default(local)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  assets       CloudinaryAsset[]
 }
 
 model CloudinaryAsset {
@@ -38,17 +39,19 @@ model CloudinaryAsset {
   secureUrl    String
   createdAt    DateTime
   updatedAt    DateTime     @updatedAt
-
+  displayName  String
   // Fields specific to video
-  duration    Float?
-  frameRate   Float?
-  bitRate     Int?
-  playbackUrl String?
+  duration     Float?
+  frameRate    Float?
+  bitRate      Int?
+  playbackUrl  String?
 
   // Common metadata
-  tags String[]
-
+  tags    String[]
+  starred Boolean  @default(false)
   // You can add more fields here as needed
+  User    User     @relation(fields: [userId], references: [id])
+  userId  String
 }
 
 enum resourceType {

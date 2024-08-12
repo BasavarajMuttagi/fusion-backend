@@ -7,8 +7,12 @@ import {
 } from "../..";
 import prisma from "../../prisma/db";
 import { DeleteNotification, UploadNotification } from "../types";
+import { tokenType } from "../middlewares/auth.middleware";
+import { resourceType } from "@prisma/client";
 
 const GetSignature = async (req: Request, res: Response) => {
+  const user = req.body.user as tokenType;
+  const fileName = req.body.fileName;
   try {
     cloudinary.config({
       cloud_name: CLOUDINARY_NAME,
@@ -21,15 +25,20 @@ const GetSignature = async (req: Request, res: Response) => {
 
     const params = {
       timestamp: timestamp,
+      upload_preset: "user_uploads",
+      public_id: `user_${user.userId}/${fileName}`,
+      folder: `user_uploads/${user.userId}`,
     };
 
-    // Generate the signature
     const signature = cloudinary.utils.api_sign_request(
       params,
       cloudinary.config().api_secret!,
     );
 
-    return res.status(200).send({ signature, timestamp });
+    return res.status(200).send({
+      ...params,
+      signature,
+    });
   } catch (error) {
     return res
       .status(500)
@@ -37,18 +46,25 @@ const GetSignature = async (req: Request, res: Response) => {
   }
 };
 
-const GetAllObjects = async (req: Request, res: Response) => {
+const GetAssetsByResourceType = async (req: Request, res: Response) => {
+  const resource_type = req.params.resource_type as resourceType;
+  const { userId } = req.body.user as tokenType;
   try {
-    const resource_type = req.params.resource_type;
-    const result = await cloudinary.api.resources({
-      type: "upload",
-      resource_type,
-      max_results: 5,
+    if (!["image", "video"].includes(resource_type)) {
+      return res.status(400).json({ error: "Invalid resource type" });
+    }
+
+    const assets = await prisma.cloudinaryAsset.findMany({
+      where: {
+        userId,
+        resourceType: resource_type,
+      },
     });
-    return res.status(200).json(result);
+
+    return res.status(200).json(assets);
   } catch (error) {
-    console.error("Error fetching resources:", error);
-    res.status(500).json({ error: "Failed to fetch resources" });
+    console.error("Error fetching assets:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -60,7 +76,6 @@ const HandleNotifications = async (req: Request, res: Response) => {
         await handleNewUpload(payload);
         break;
       case "delete":
-        console.log(payload);
         await handleDelete(payload);
         break;
       default:
@@ -73,13 +88,41 @@ const HandleNotifications = async (req: Request, res: Response) => {
     return res.sendStatus(500);
   }
 };
-export { GetSignature, GetAllObjects, HandleNotifications };
+
+const DeleteAssetById = async (req: Request, res: Response) => {
+  const assetId = req.params.id;
+
+  try {
+    const asset = await prisma.cloudinaryAsset.findUnique({
+      where: { assetId },
+    });
+
+    if (!asset) {
+      return res.status(404).json({ message: "Asset not found" });
+    }
+
+    await prisma.cloudinaryAsset.delete({
+      where: { assetId },
+    });
+
+    return res.status(200).json({ message: "Asset deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting asset:", error);
+    return res.status(500).json({ error: "Failed to delete asset" });
+  }
+};
+
+export {
+  GetSignature,
+  GetAssetsByResourceType,
+  HandleNotifications,
+  DeleteAssetById,
+};
 
 const handleDelete = async (payload: DeleteNotification) => {
   const assetIdsToDelete = payload.resources.map(
     (resource) => resource.asset_id,
   );
-  console.log("assetIdsToDelete", assetIdsToDelete);
   try {
     await prisma.cloudinaryAsset.deleteMany({
       where: {
@@ -95,6 +138,8 @@ const handleDelete = async (payload: DeleteNotification) => {
 };
 
 const handleNewUpload = async (payload: UploadNotification) => {
+  console.log(payload);
+  const userId = payload.asset_folder.split("/")[1];
   await prisma.cloudinaryAsset.create({
     data: {
       assetId: payload.asset_id,
@@ -113,6 +158,8 @@ const handleNewUpload = async (payload: UploadNotification) => {
       frameRate: payload.frame_rate,
       bitRate: payload.bit_rate,
       playbackUrl: payload.playback_url,
+      userId,
+      displayName: payload.display_name,
     },
   });
 };
