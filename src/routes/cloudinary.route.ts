@@ -4,6 +4,7 @@ import {
   GetAssetsByResourceType,
   GetSignature,
   HandleNotifications,
+  StarAssetById,
 } from "../controllers/cloudinary.controller";
 import { validateToken } from "../middlewares/auth.middleware";
 
@@ -17,4 +18,6 @@ CloudinaryRouter.get(
 );
 CloudinaryRouter.post("/webhook", HandleNotifications);
 CloudinaryRouter.get("/delete/:id", validateToken, DeleteAssetById);
+CloudinaryRouter.get("/star/:id", validateToken, StarAssetById);
+
 export default CloudinaryRouter;

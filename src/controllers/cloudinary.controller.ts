@@ -49,21 +49,67 @@ const GetSignature = async (req: Request, res: Response) => {
 const GetAssetsByResourceType = async (req: Request, res: Response) => {
   const resource_type = req.params.resource_type as resourceType;
   const { userId } = req.body.user as tokenType;
+  const { starred } = req.query;
+
   try {
     if (!["image", "video"].includes(resource_type)) {
       return res.status(400).json({ error: "Invalid resource type" });
     }
 
+    const whereConditions: {
+      userId: string;
+      resourceType: resourceType;
+      starred?: boolean;
+    } = {
+      userId,
+      resourceType: resource_type,
+    };
+
+    if (starred !== undefined) {
+      const isStarred = starred === "true";
+      whereConditions.starred = isStarred;
+    }
+
     const assets = await prisma.cloudinaryAsset.findMany({
-      where: {
-        userId,
-        resourceType: resource_type,
-      },
+      where: whereConditions,
     });
 
     return res.status(200).json(assets);
   } catch (error) {
     console.error("Error fetching assets:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const StarAssetById = async (req: Request, res: Response) => {
+  const assetId = req.params.id;
+  const { userId } = req.body.user as tokenType;
+
+  try {
+    const asset = await prisma.cloudinaryAsset.findUnique({
+      where: {
+        assetId,
+        userId,
+      },
+    });
+
+    if (!asset) {
+      return res.status(404).json({ error: "Asset not found" });
+    }
+
+    const updatedAsset = await prisma.cloudinaryAsset.update({
+      where: {
+        assetId,
+        userId,
+      },
+      data: {
+        starred: !asset.starred,
+      },
+    });
+
+    return res.status(200).json(updatedAsset);
+  } catch (error) {
+    console.error("Error starring asset:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -117,6 +163,7 @@ export {
   GetAssetsByResourceType,
   HandleNotifications,
   DeleteAssetById,
+  StarAssetById,
 };
 
 const handleDelete = async (payload: DeleteNotification) => {
